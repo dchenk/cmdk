@@ -5,7 +5,6 @@ import * as React from 'react'
 import { commandScore } from './command-score'
 import { Primitive } from '@radix-ui/react-primitive'
 import { useId } from '@radix-ui/react-id'
-import { useSyncExternalStore } from 'use-sync-external-store/shim/index.js'
 
 type Children = { children?: React.ReactNode }
 type DivProps = React.ComponentPropsWithoutRef<typeof Primitive.div>
@@ -990,7 +989,7 @@ function useAsRef<T>(data: T) {
 const useLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect
 
 function useLazyRef<T>(fn: () => T) {
-  const ref = React.useRef<T>()
+  const ref = React.useRef<T>(undefined)
 
   if (ref.current === undefined) {
     ref.current = fn()
@@ -1018,7 +1017,7 @@ function mergeRefs<T = any>(refs: Array<React.MutableRefObject<T> | React.Legacy
 function useCmdk<T = any>(selector: (state: State) => T): T {
   const store = useStore()
   const cb = () => selector(store.snapshot())
-  return useSyncExternalStore(store.subscribe, cb, cb)
+  return React.useSyncExternalStore(store.subscribe, cb, cb)
 }
 
 function useValue(
@@ -1027,7 +1026,7 @@ function useValue(
   deps: (string | React.ReactNode | React.RefObject<HTMLElement>)[],
   aliases: string[] = [],
 ) {
-  const valueRef = React.useRef<string>()
+  const valueRef = React.useRef<string>(undefined)
   const context = useCommand()
 
   useLayoutEffect(() => {
@@ -1084,10 +1083,12 @@ function renderChildren(children: React.ReactElement) {
 
 function SlottableWithNestedChildren(
   { asChild, children }: { asChild?: boolean; children?: React.ReactNode },
-  render: (child: React.ReactNode) => JSX.Element,
+  render: (child: React.ReactNode) => React.ReactElement,
 ) {
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(renderChildren(children), { ref: (children as any).ref }, render(children.props.children))
+    return React.cloneElement(renderChildren(children), { ref: (children as any).ref },
+      // @ts-expect-error -- children is OK
+      render(children.props.children))
   }
   return render(children)
 }
